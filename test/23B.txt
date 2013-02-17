@@ -25,7 +25,7 @@
 * Stage/ Cycle where Analysis is performed = Stage 2, Step 2
 
 [Results]
-Well	Well Position	Target Name	CT	BADROX	NOAMP	EXPFAIL	THOLDFAIL
+Well	Target Name	CT	BADROX	NOAMP	EXPFAIL	THOLDFAIL
 1	dme-miR-7-000268	29.359	N	N	N	N
 2	hsa-miR-548I-002909	Undetermined	N	N	Y	Y
 3	hsa-miR-30a-3p-000416	23.608	N	N	N	N

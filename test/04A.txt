@@ -25,7 +25,7 @@
 * Stage/ Cycle where Analysis is performed = Stage 2, Step 2
 
 [Results]
-Well	Well Position	Target Name	CT	NOAMP	EXPFAIL
+Well	Target Name	CT	NOAMP	EXPFAIL
 1	hsa-let-7a-4373169	27.658	N	N
 2	hsa-let-7c-4373167	25.159	N	N
 3	hsa-let-7d-4395394	23.824	N	N

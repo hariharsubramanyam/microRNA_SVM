@@ -289,7 +289,6 @@ def filesToAssayArray(txtfiles,inDir):
     (targetnames,cts) = getTargetNamesAndCTs(open(AFileNames[0],"r").readlines(),AFileNames[0])
     for x in xrange(0,len(targetnames)):
         AAssays.append(Assay(targetnames[x],"A"))
-    
 
     (targetnames,cts) = getTargetNamesAndCTs(open(BFileNames[0],"r").readlines(),BFileNames[0])
     for x in xrange(0,len(targetnames)):
@@ -297,7 +296,10 @@ def filesToAssayArray(txtfiles,inDir):
     
     # Append the cts to each assay
     for AFileName in AFileNames:
-        (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
+        try:
+            (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
+        except:
+            print AFileName
         for x in xrange(0,len(targetnames)):
             for AAssay in AAssays:
                 if AAssay.name == targetnames[x]:
@@ -341,6 +343,8 @@ def getTargetNamesAndCTs(lines, fname):
                     spl[tInt] += str(u6)    # Give U6 assays distinct names
                     u6 += 1
                 targetNames.append(spl[tInt])
+                if spl[cInt] == 'N' or spl[cInt] == 'Y':
+                    raise Exception("")
                 cts.append(spl[cInt])
         elif "[Results]" in lines[x]:
             resLine = x
