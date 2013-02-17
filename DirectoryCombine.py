@@ -327,7 +327,6 @@ def getTargetNamesAndCTs(lines, fname):
         if resLine <> -1:   # If this is the line after resLine, get column information
             if x == resLine + 1:
                 spl = lines[x].split("\t")
-                print spl
                 rowLen = len(spl)
                 for y in xrange(0,len(spl)):
                     if spl[y] == "Target Name":
@@ -336,7 +335,7 @@ def getTargetNamesAndCTs(lines, fname):
                         cInt = y
             elif x >= resLine + 2 and tInt <> -1 and cInt <> -1:    # If this is a later line, get CT and TargetName
                 spl = lines[x].split("\t")
-                if len(spl) < rowLen and x==resLine+2:  # If this is not a row, ignore it
+                if len(spl) < rowLen and x>resLine+2:  # If this is not a row, ignore it
                     continue
                 if "U6" in spl[tInt]:
                     spl[tInt] += str(u6)    # Give U6 assays distinct names
