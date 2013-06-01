@@ -21,13 +21,23 @@ import shlex        # for string splitting
 from subprocess import *    # for using subprocess functions by writing myFunction() instead of subprocess.myFunction()
 from os import listdir      # for listing directories
 from os.path import isfile, join    # for checking if files exist and combining multiple strings into one 
-from mx.Misc.Cache import DENOM     # for command line programs
+#from mx.Misc.Cache import DENOM     # for command line programs
 
 def main():
+    scriptDir = os.path.dirname(os.path.realpath(__file__))
+    
+    # DEBUG
+    inDir = 'test'
+    libsvmdir = 'libsvm-3.17'
+    groupfile = None
+    compMetric = 1
+    testingDir = None
+
+    '''
     # Parse command line arguments (see README for description of arguments)
     aParser = argparse.ArgumentParser(description="Aggregate PCR files and optionally run SVM")
     aParser.add_argument("inDir",help="Directory containing PCR files")
-    aParser.add_argument("-l","--libsvmdir", help="Directory containing libsvm (ex. user/stuff/libsvm-3.12)")
+    aParser.add_argument("-l","--libsvmdir", help="Directory containing libsvm (ex. user/stuff/libsvm-3.16)")
     aParser.add_argument("-g","--groupfile", help="File explaining how are patients broken into groups")
     aParser.add_argument("-t","--testingDir",help="Directory containing patients to be classified")
     aParser.add_argument("-c","--compMetric",help="Metric used to normalize between patients (0 = chi-squared (default), 1 = variance*mean)")
@@ -38,19 +48,21 @@ def main():
     inDir = argNamespace.inDir
     libsvmdir = argNamespace.libsvmdir
     groupfile = argNamespace.groupfile
-    scriptDir = os.path.dirname(os.path.realpath(__file__))
     compMetric = argNamespace.compMetric
     testingDir = argNamespace.testingDir
+    '''
+    
+
     # Find the text files
     print "Identifying text files..."
     sys.stdout.flush() 
     txtfiles = [f for f in listdir(inDir) if isfile(join(inDir,f)) and (".txt" == f[-4:])]
-
+    
     # Get array of A and B assays    
     print "Combining text file data..."
     sys.stdout.flush()
     (AAssays,BAssays) = filesToAssayArray(txtfiles,inDir)
-
+    
     # Print out table
     print "Producing raw output..."
     sys.stdout.flush()
@@ -141,7 +153,7 @@ def main():
             # Write data string to file
             currDir = os.getcwd()
             os.chdir(libsvmdir)
-            dataFile = open(libsvmdir+"/PatientData","w")
+            dataFile = open("PatientData","w")
             dataFile.write(outString)
             dataFile.close()
             if (not (testingDir is None)):
@@ -177,7 +189,7 @@ def assayOutputString(assays,ABMerged=False):
         (AAssays,BAssays) = assays
     else:
         (AAssays,BAssays) = (assays,[])
-
+    
     # Get experiment names for A and B assays
     AExps = [AAssays[0].cts[x].experiment for x in xrange(0,len(AAssays[0].cts))]
     if ABMerged:
@@ -282,31 +294,24 @@ def filesToAssayArray(txtfiles,inDir):
     (AFileNames, BFileNames) =  (fileNamesForLetter(txtfiles,inDir, "A"),fileNamesForLetter(txtfiles,inDir, "B"))
     AAssays = []
     BAssays = []
-    AFileNames.sort()
-    BFileNames.sort()
     
     # Get the A and B assay names
     (targetnames,cts) = getTargetNamesAndCTs(open(AFileNames[0],"r").readlines(),AFileNames[0])
     for x in xrange(0,len(targetnames)):
         AAssays.append(Assay(targetnames[x],"A"))
-
+    
     (targetnames,cts) = getTargetNamesAndCTs(open(BFileNames[0],"r").readlines(),BFileNames[0])
     for x in xrange(0,len(targetnames)):
         BAssays.append(Assay(targetnames[x],"B"))
     
     # Append the cts to each assay
     for AFileName in AFileNames:
-        try:
-            (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
-        except:
-            print AFileName
+        (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
         for x in xrange(0,len(targetnames)):
             for AAssay in AAssays:
                 if AAssay.name == targetnames[x]:
                     AAssay.cts.append(CT(cts[x],AFileName.replace(".txt","").replace("A","").replace(inDir+"/","")))
     
-    print "Finished the As"
-
     for BFileName in BFileNames:
         (targetnames,cts) = getTargetNamesAndCTs(open(BFileName,"r").readlines(),BFileName)
         for x in xrange(0,len(targetnames)):
@@ -325,7 +330,6 @@ def getTargetNamesAndCTs(lines, fname):
     rowLen = -1
     u6 = 1
     for x in xrange(0,len(lines)):
-        lines[x]=lines[x].replace('\n','').replace('\r','')
         if resLine <> -1:   # If this is the line after resLine, get column information
             if x == resLine + 1:
                 spl = lines[x].split("\t")
@@ -337,14 +341,12 @@ def getTargetNamesAndCTs(lines, fname):
                         cInt = y
             elif x >= resLine + 2 and tInt <> -1 and cInt <> -1:    # If this is a later line, get CT and TargetName
                 spl = lines[x].split("\t")
-                if len(spl) < rowLen and x>resLine+2:  # If this is not a row, ignore it
+                if len(spl) <> rowLen:  # If this is not a row, ignore it
                     continue
                 if "U6" in spl[tInt]:
                     spl[tInt] += str(u6)    # Give U6 assays distinct names
                     u6 += 1
                 targetNames.append(spl[tInt])
-                if spl[cInt] == 'N' or spl[cInt] == 'Y':
-                    raise Exception("")
                 cts.append(spl[cInt])
         elif "[Results]" in lines[x]:
             resLine = x
@@ -573,7 +575,7 @@ class SVMHelper:
         assert os.path.exists(self.svmscale_exe),"svm-scale executable not found"
         assert os.path.exists(self.svmtrain_exe),"svm-train executable not found"
         assert os.path.exists(self.svmpredict_exe),"svm-predict executable not found"
-        assert os.path.exists(self.gnuplot_exe),"gnuplot executable not found"
+        #assert os.path.exists(self.gnuplot_exe),"gnuplot executable not found"
         assert os.path.exists(self.grid_py),"grid.py not found"
         
     def scaleFile(self,origFileName,scaledFileName):

@@ -1,0 +1,13 @@
+banjo:attachments ambros$ python /Users/ambros/Desktop/SVMStuff_05_22/DirectoryCombine.py /Users/ambros/Desktop/SVMStuff_05_22/CSF -c 1
+Identifying text files...
+Combining text file data...
+Producing raw output...
+Merging A and B assays...
+Traceback (most recent call last):
+  File "/Users/ambros/Desktop/SVMStuff_05_22/DirectoryCombine.py", line 763, in <module>
+    main()
+  File "/Users/ambros/Desktop/SVMStuff_05_22/DirectoryCombine.py", line 64, in main
+    (assays, adjuster) = combineABAssays(AAssays,BAssays)
+  File "/Users/ambros/Desktop/SVMStuff_05_22/DirectoryCombine.py", line 253, in combineABAssays
+    AU6 = [float(x.getCTForExperiment("01").value) for x in AAssays if "U6" in x.name and x.getCTForExperiment("01").value <> "Undetermined"]
+AttributeError: 'NoneType' object has no attribute 'value'
