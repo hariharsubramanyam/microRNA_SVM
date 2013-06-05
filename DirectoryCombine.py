@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Assumptions Made:
+    # Script is in directory containing libsvm directory, patgroups.txt, training directory, and (optional) testing directory
     # All input file names will end with .txt
     # Every input file name (excluding the .txt) will be of the form <number><A or B> (ex. 60A.txt, 12B.txt, 52A.txt)
     # There are N assays in the A-group whose name includes "U6" and N assays in the B-group whose name includes "U6"  
@@ -24,44 +25,37 @@ from os.path import isfile, join    # for checking if files exist and combining 
 #from mx.Misc.Cache import DENOM     # for command line programs
 
 def main():
-    scriptDir = os.path.dirname(os.path.realpath(__file__))
-    
-    # DEBUG
-    inDir = 'test'
-    libsvmdir = 'libsvm-3.17'
-    groupfile = None
-    compMetric = 1
-    testingDir = None
-
-    '''
     # Parse command line arguments (see README for description of arguments)
     aParser = argparse.ArgumentParser(description="Aggregate PCR files and optionally run SVM")
-    aParser.add_argument("inDir",help="Directory containing PCR files")
-    aParser.add_argument("-l","--libsvmdir", help="Directory containing libsvm (ex. user/stuff/libsvm-3.16)")
-    aParser.add_argument("-g","--groupfile", help="File explaining how are patients broken into groups")
-    aParser.add_argument("-t","--testingDir",help="Directory containing patients to be classified")
+    aParser.add_argument("-t","--testData",help="0 = do not run SVM on testing data (default), 1 = run SVM on testing data")
     aParser.add_argument("-c","--compMetric",help="Metric used to normalize between patients (0 = chi-squared (default), 1 = variance*mean)")
-    
     argNamespace = aParser.parse_args()
 
-    # map command line arguments to local variables
-    inDir = argNamespace.inDir
-    libsvmdir = argNamespace.libsvmdir
-    groupfile = argNamespace.groupfile
-    compMetric = argNamespace.compMetric
-    testingDir = argNamespace.testingDir
-    '''
+    scriptDir = os.path.dirname(os.path.realpath(__file__))
+    libsvmdir = checkForLibSVM()
+    groupfile = checkForGroupFile()
+    trainingDir = checkForTrainingData()
+    testingDir = None
+    compMetric = 0
     
+    if not(libsvmdir or groupfile):
+        print "\n"
+        print "Please ensure that the libsvm directory and the patient group file (patgroups.txt) are both present, then rerun the script"
+    if not(trainingDir):
+        print "\n"
+        print "Please ensure that the script is placed in a directory which CONTAINS the directory of training data (call it training_data)"
+    if argNamespace.testData and argNamespace.testData == 1: 
+        testingdir = checkForTestingData()
 
     # Find the text files
     print "Identifying text files..."
     sys.stdout.flush() 
-    txtfiles = [f for f in listdir(inDir) if isfile(join(inDir,f)) and (".txt" == f[-4:])]
+    txtfiles = [f for f in listdir(trainingDir) if isfile(join(trainingDir,f)) and (".txt" == f[-4:])]
     
     # Get array of A and B assays    
     print "Combining text file data..."
     sys.stdout.flush()
-    (AAssays,BAssays) = filesToAssayArray(txtfiles,inDir)
+    (AAssays,BAssays) = filesToAssayArray(txtfiles,trainingDir)
     
     # Print out table
     print "Producing raw output..."
@@ -259,6 +253,59 @@ def assaysToPatients(assays,txtfiles):
                     patient.mirs.append(Mir(assay.name,ct.value,assay.group))
     return patients
 
+def checkForLibSVM():
+    libsvmdir = None
+    try:
+        libsvmdir = [f for f in listdir('.') if 'libsvm' in f][0]
+        print "Found", libsvmdir
+        sys.stdout.flush()
+        return libsvmdir
+    except:
+        print "Could not find libsvm..."
+        print "Please ensure that this script (DirectoryCombine.py) is in a directory which CONTAINS the libsvm directory (ex. libsvm-3.17)"
+        sys.stdout.flush()
+        return None
+
+def checkForGroupFile():
+    patgroups = None
+    try:
+        patgroups = [f for f in listdir('.') if 'patgroups.txt' in f][0]
+        print "Found patgroups.txt..."
+        sys.stdout.flush()
+        return patgroups
+    except:
+        print "Could not find patgroups.txt"
+        print "Please ensure that this script (DirectoryCombine.py) is in a directory which CONTAINS the patient groups file (patgroups.txt)"
+        sys.stdout.flush()
+        return None
+
+def checkForTestingData():
+    testingDir = None
+    try:
+        testingDir = [f for f in listdir('.') if 'testing_data' in f][0]
+        print "Found testing_data..."
+        sys.stdout.flush()
+        return testingDir
+    except:
+        print "Could not find testing_data"
+        print "Please ensure that this script (DirectoryCombine.py) is in a directory which CONTAINS the directory of testing data files (called testing_data)"
+        sys.stdout.flush()
+        return None
+
+def checkForTrainingData():
+    trainingDir = None
+    try:
+        trainingDir = [f for f in listdir('.') if 'training_data' in f][0]
+        print "Found training_data..."
+        sys.stdout.flush()
+        return trainingDir
+    except:
+        print "Could not find training_data"
+        print "Please ensure that this script (DirectoryCombine.py) is in a directory which CONTAINS the directory of training data files (called training_data)"
+        sys.stdout.flush()
+        return None
+
+
 def combineABAssays(AAssays,BAssays,refExp = "01"):
     # Merge A and B assays using the U6 reference assay
     # Get U6 assay CTs from A and B assays
@@ -283,15 +330,15 @@ def copyFileToPath(filePath,targetPath):
     targetFile.writelines(lines)
     targetFile.close()
 
-def fileNamesForLetter(txtfiles,inDir, letter):
+def fileNamesForLetter(txtfiles,trainingDir, letter):
     # Returns all file names for group A or B
-    fileNames = [inDir + "/" + f for f in txtfiles if f[-5:-4] == letter]
+    fileNames = [trainingDir + "/" + f for f in txtfiles if f[-5:-4] == letter]
     return fileNames
 
-def filesToAssayArray(txtfiles,inDir):
+def filesToAssayArray(txtfiles,trainingDir):
     # Turns files into array of assays
     
-    (AFileNames, BFileNames) =  (fileNamesForLetter(txtfiles,inDir, "A"),fileNamesForLetter(txtfiles,inDir, "B"))
+    (AFileNames, BFileNames) =  (fileNamesForLetter(txtfiles,trainingDir, "A"),fileNamesForLetter(txtfiles,trainingDir, "B"))
     AAssays = []
     BAssays = []
     
@@ -310,14 +357,14 @@ def filesToAssayArray(txtfiles,inDir):
         for x in xrange(0,len(targetnames)):
             for AAssay in AAssays:
                 if AAssay.name == targetnames[x]:
-                    AAssay.cts.append(CT(cts[x],AFileName.replace(".txt","").replace("A","").replace(inDir+"/","")))
+                    AAssay.cts.append(CT(cts[x],AFileName.replace(".txt","").replace("A","").replace(trainingDir+"/","")))
     
     for BFileName in BFileNames:
         (targetnames,cts) = getTargetNamesAndCTs(open(BFileName,"r").readlines(),BFileName)
         for x in xrange(0,len(targetnames)):
             for BAssay in BAssays:
                 if BAssay.name == targetnames[x]:
-                    BAssay.cts.append(CT(cts[x],BFileName.replace(".txt","").replace("B","").replace(inDir+"/","")))
+                    BAssay.cts.append(CT(cts[x],BFileName.replace(".txt","").replace("B","").replace(trainingDir+"/","")))
     return (AAssays,BAssays)
 
 def getTargetNamesAndCTs(lines, fname):
@@ -450,7 +497,7 @@ def patientsToAssays(patients,oldAssays):
                     assay.cts.append(CT(mir.ct, patient.name))
     return assays
 
-def populateAssaysForNames(AAssayNames,BAssayNames,AFileNames,BFileNames,inDir):
+def populateAssaysForNames(AAssayNames,BAssayNames,AFileNames,BFileNames,trainingDir):
     AAssays = [Assay(AAssayNames[x],"A") for x in range(0,len(AAssayNames))]
     BAssays = [Assay(BAssayNames[x],"B") for x in range(0,len(BAssayNames))]
     for AFileName in AFileNames:
@@ -461,7 +508,7 @@ def populateAssaysForNames(AAssayNames,BAssayNames,AFileNames,BFileNames,inDir):
                 spl = line.split("\t")
                 if spl[1] <> AAssays[assayCounter].name:
                     raise Exception("Error")        
-                AAssays[assayCounter].cts.append(CT(spl[2],AFileName.replace(inDir+"/", "").replace(".txt","").replace("A", "")))             
+                AAssays[assayCounter].cts.append(CT(spl[2],AFileName.replace(trainingDir+"/", "").replace(".txt","").replace("A", "")))             
                 assayCounter += 1
         AFile.close()
     for BFileName in BFileNames:
@@ -472,7 +519,7 @@ def populateAssaysForNames(AAssayNames,BAssayNames,AFileNames,BFileNames,inDir):
                 spl = line.split("\t")
                 if spl[1] <> BAssays[assayCounter].name:
                     raise Exception("Error")        
-                BAssays[assayCounter].cts.append(CT(spl[2],BFileName.replace(inDir+"/", "").replace(".txt","").replace("B", "")))             
+                BAssays[assayCounter].cts.append(CT(spl[2],BFileName.replace(trainingDir+"/", "").replace(".txt","").replace("B", "")))             
                 assayCounter += 1
         BFile.close()
     return (AAssays,BAssays)
