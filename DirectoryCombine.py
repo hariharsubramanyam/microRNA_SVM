@@ -33,7 +33,6 @@ def main():
     '''
 
     aParser = argparse.ArgumentParser(description="Aggregate PCR files and optionally run SVM")
-    aParser.add_argument("-t","--testData",help="0 = do not run SVM on testing data (default), 1 = run SVM on testing data")
     aParser.add_argument("-c","--compMetric",help="Metric used to normalize between patients (0 = chi-squared (default), 1 = variance*mean)")
     aParser.add_argument("-f","--feature_set_size",help="Number of micro-RNAs to look for when determining most distinguishing micro-RNAs")
     argNamespace = aParser.parse_args()
@@ -42,8 +41,8 @@ def main():
     libsvmdir = checkForLibSVM()
     groupfile = checkForGroupFile()
     trainingDir = checkForTrainingData()
+    testingPatientsFile = checkForTestingPatientsFile()
     feature_set_size = argNamespace.feature_set_size
-    testingDir = None
     compMetric = 0
     feature_set_size = 10
 
@@ -53,9 +52,7 @@ def main():
     if not(trainingDir):
         print "\n"
         print "Please ensure that the script is placed in a directory which CONTAINS the directory of training data (call it training_data)"
-    if argNamespace.testData and argNamespace.testData == 1: 
-        testingdir = checkForTestingData()
-
+    
     '''
     ###########################
     NORMALIZATION
@@ -147,15 +144,20 @@ def main():
     sys.stdout.flush()
     groups = labelPatients(patients, groupfile)
     
+    # Determine which files need to be tested
+    print "Determining files to be tested..."
+    sys.stdout.flush()
+    testPatients = [x.replace("\n","") for x in open(testingPatientsFile).readlines()]
+    
     # Get all candidate mirs
-    print "\nChoosing mirs from A group with all CTs..."
+    print "Choosing mirs from A group with all CTs..."
     sys.stdout.flush()
     lvMirNames = [x.name for x in assays if x.group == "A"]
     
     
     for x in xrange(0,len(groups)-1):
         for y in xrange(x+1,len(groups)):
-            # Generate testing data string
+            # Generate training data string
             outString = ""
             for patient in patients:
                 if not(patient.label is None):
@@ -166,22 +168,29 @@ def main():
             dataFile = open(libsvmdir + "/PatientData","w")
             dataFile.write(outString)
             dataFile.close()
-            if (not (testingDir is None)):
-                testingFile = open(libsvmdir+"/PatientDataTesting","w")
-                testingFile.write(outString)
-                testingFile.close()
+
+            # Generate testing data string
+            outString = ""
+            for patient in patients:
+                if patient.name in testPatients:
+                    outString += patient.toSVMFormatStringForMirs(lvMirNames) + "\n"
+            outString = outString.strip()
+            testingFile = open(libsvmdir+"/PatientDataTesting","w")
+            testingFile.write(outString)
+            testingFile.close()
             
             currDir = os.getcwd()
             os.chdir(scriptDir + "/" + libsvmdir+"/tools")
             
-            if (not (testingDir is None)):
+            if (not (testingPatientsFile is None)):
                 if feature_set_size is None:
                     os.system("python fselect.py ../PatientData ../PatientDataTesting")
                 else:
                     os.system("python fselect.py ../PatientData " + str(feature_set_size) + " ../PatientDataTesting")
-                copyFileToPath(libsvmdir + "/tools/PatientData.model", scriptDir + "/Output/Model" + str(groups[x]) + "_" + str(groups[y]) + ".model")
-                copyFileToPath(libsvmdir + "/PatientDataTesting",scriptDir + "/Output/Testing" + str(groups[x]) + "_" + str(groups[y]))
-                copyFileToPath(libsvmdir + "/PatientDataTesting", scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
+                os.chdir(currDir)
+                copyFileToPath(scriptDir + "/" + libsvmdir + "/tools/PatientData.10.model", scriptDir + "/Output/Model" + str(groups[x]) + "_" + str(groups[y]) + ".model")
+                copyFileToPath(scriptDir + "/" + libsvmdir + "/PatientDataTesting",scriptDir + "/Output/Testing" + str(groups[x]) + "_" + str(groups[y]))
+                copyFileToPath(scriptDir + "/" + libsvmdir + "/tools/PatientDataTesting.10.pred", scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
             else:
                 if feature_set_size is None:
                     os.system("python fselect.py ../PatientData")
@@ -329,23 +338,23 @@ def checkForGroupFile():
         sys.stdout.flush()
         return None
 
-def checkForTestingData():
-    testingDir = None
+def checkForTestingPatientsFile():
+    testingPatientsFile = None
     try:
-        testingDir = [f for f in listdir('.') if 'testing_data' in f][0]
-        print "Found testing_data..."
+        testingPatientsFile = [f for f in listdir('.') if 'testing_patients.txt' in f][0]
+        print "Found testing_patients.txt..."
         sys.stdout.flush()
-        return testingDir
+        return testingPatientsFile
     except:
-        print "Could not find testing_data"
-        print "Please ensure that this script (DirectoryCombine.py) is in a directory which CONTAINS the directory of testing data files (called testing_data)"
+        print "Could not find testing_patients.txt"
+        print "Please ensure that this script (DirectoryCombine.py) is in a directory which CONTAINS the testing patients file (testing_patients.txt)"
         sys.stdout.flush()
         return None
 
 def checkForTrainingData():
     trainingDir = None
     try:
-        trainingDir = [f for f in listdir('.') if 'training_data' in f][0]
+        trainingDir = [f for f in listdir('.') if 'patient_data' in f][0]
         print "Found training_data..."
         sys.stdout.flush()
         return trainingDir
@@ -516,6 +525,8 @@ def getTargetNamesAndCTs(lines, fname):
         raise Exception(fname + " does not have the CT and Target Name columns")
     return (targetNames, cts)
 '''   
+
+
 def histogramDictionary(L, binSz, low, high):
     # Create a histogram in the form of a dictionary
     d = {}
