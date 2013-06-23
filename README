@@ -1,0 +1,23 @@
+Here is a summary of all the major computations in DirectoryCombine
+
+1: Convert files to A and B assays
+	- Heavy lifting done in filesToAssayArray() and getTargetNamesAndCTs()
+	- Process the A and B files separately
+	- Identify the target (assay) names and cts using the first file from each list
+	- Iterate through each file, get it's target names and cts, look up the target name in the assay list, add the ct to the assay that is found
+
+2: (Normalize between A and B) If there are B files, merge them with the A files (using the U6 assays)
+	- First find a reference patient (ex. if 03 is the reference patient, the training data has 03A.txt and 03B.txt)
+	- For this reference patient, find the DIFFERENCE between the AVERAGES of the U6 ASSAY CTS for A and B (i.e. Au6Avg - Bu6Avg = adjuster) and call this difference the adjuster
+	- For EVERY B assay, increment its cts by the adjuster
+
+3: Find least variant assays
+	- Two possible metrics: variance*mean or chi-square (sum of (observed-expected)^2)
+	- Candidates for least variant assays must belong to group A and have all their CTs
+	- The expected value for a given assay is found by summing the cts over all patients and dividing by the number of patients
+
+4: Assay and CT data structures into Patient and Mir data structures
+
+5: (Normalize within patients) 
+	- Choose the 10% of the least variant assays
+	- Compute the average ct of these least variant assays and subtract that from all the patient CTs

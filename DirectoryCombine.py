@@ -25,7 +25,13 @@ from os.path import isfile, join    # for checking if files exist and combining 
 #from mx.Misc.Cache import DENOM     # for command line programs
 
 def main():
-    # Parse command line arguments (see README for description of arguments)
+    
+    '''
+    ###########################
+    CMD LINE ARGS & INPUT FILES
+    ###########################
+    '''
+
     aParser = argparse.ArgumentParser(description="Aggregate PCR files and optionally run SVM")
     aParser.add_argument("-t","--testData",help="0 = do not run SVM on testing data (default), 1 = run SVM on testing data")
     aParser.add_argument("-c","--compMetric",help="Metric used to normalize between patients (0 = chi-squared (default), 1 = variance*mean)")
@@ -37,7 +43,8 @@ def main():
     trainingDir = checkForTrainingData()
     testingDir = None
     compMetric = 0
-    
+    trainingDir = "./CSF"
+
     if not(libsvmdir or groupfile):
         print "\n"
         print "Please ensure that the libsvm directory and the patient group file (patgroups.txt) are both present, then rerun the script"
@@ -46,6 +53,12 @@ def main():
         print "Please ensure that the script is placed in a directory which CONTAINS the directory of training data (call it training_data)"
     if argNamespace.testData and argNamespace.testData == 1: 
         testingdir = checkForTestingData()
+
+    '''
+    ###########################
+    NORMALIZATION
+    ###########################
+    '''
 
     # Find the text files
     print "Identifying text files..."
@@ -65,22 +78,25 @@ def main():
     fileRawOutput.close()
     
     # Combine A and B assays
-    print "Merging A and B assays..."
-    sys.stdout.flush()
-    (assays, adjuster) = combineABAssays(AAssays,BAssays)
-    
-    # Print out another table
-    print "Producing combined output..."
-    sys.stdout.flush()
-    fileCombineOutput = open(scriptDir + "/Output/B_CombinedOutput.txt","w")
-    fileCombineOutput.write(assayOutputString(assays,ABMerged=False))
-    fileCombineOutput.close()
+    if len(BAssays) > 0:
+        print "Merging A and B assays..."
+        sys.stdout.flush()
+        (assays, adjuster) = combineABAssays(AAssays,BAssays)
+
+        # Print out another table
+        print "Producing combined output..."
+        sys.stdout.flush()
+        fileCombineOutput = open(scriptDir + "/Output/B_CombinedOutput.txt","w")
+        fileCombineOutput.write(assayOutputString(assays,ABMerged=False))
+        fileCombineOutput.close()
+    else:
+        assays = AAssays
+        adjuster = 0
         
     
     # Find least variant assays according to the metric that the user inputted
     print "Finding least variant assays..."
     sys.stdout.flush()
-    minChiSqAssays(assays)
     if int(compMetric) == 1:
         (minAssays,metricName) = minVarianceTimesMeanAssays(assays)
     else:
@@ -145,17 +161,16 @@ def main():
                         outString += patient.toSVMFormatStringForMirs(lvMirNames) + "\n" 
             outString = outString.strip()
             # Write data string to file
-            currDir = os.getcwd()
-            os.chdir(libsvmdir)
-            dataFile = open("PatientData","w")
+            dataFile = open(libsvmdir + "/PatientData","w")
             dataFile.write(outString)
             dataFile.close()
             if (not (testingDir is None)):
                 testingFile = open(libsvmdir+"/PatientDataTesting","w")
                 testingFile.write(outString)
                 testingFile.close()
-                
-            os.chdir(libsvmdir+"/tools")
+            
+            currDir = os.getcwd()
+            os.chdir(scriptDir + "/" + libsvmdir+"/tools")
             
             if (not (testingDir is None)):
                 os.system("python fselect.py ../PatientData ../PatientDataTesting")
@@ -164,7 +179,8 @@ def main():
                 copyFileToPath(libsvmdir + "/PatientDataTesting", scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
             else:
                 os.system("python fselect.py ../PatientData")
-                
+            
+            os.chdir(currDir)
             copyFileToPath(libsvmdir + "/PatientData",scriptDir + "/Output/Training" + str(groups[x]) + "_" + str(groups[y]))
             copyFileToPath(libsvmdir + "/tools/PatientData.select", scriptDir + "/Output/Select" + str(groups[x]) + "_" + str(groups[y]) + ".select")
             os.chdir(currDir)
@@ -172,7 +188,7 @@ def main():
                     
     print "Done"
 
-def assayOutputString(assays,ABMerged=False):
+def assayOutputString(assays,ABMerged=False,tabDelimited=True):
     # Produces a tabular representation of an array of assays
     # ABMerged = True means the assays have been normalized
     # assays is a tuple of the form (AAssays, BAssays)
@@ -200,9 +216,16 @@ def assayOutputString(assays,ABMerged=False):
     exps.sort()
     
     # Create column headers
-    outString += ("%-10s%-30s") % ("Well","Target_Name")
+    if tabDelimited:
+        outString += "Well\tTarget_Name"
+    else:
+        outString += ("%-10s%-30s") % ("Well","Target_Name")
+    
     for exp in exps:
-        outString += ("%-30s")%(exp)
+        if tabDelimited:
+            outString += "\t" + exp
+        else:
+            outString += ("%-30s")%(exp)
         
      
     outString += "\n\n"
@@ -210,26 +233,45 @@ def assayOutputString(assays,ABMerged=False):
     # For all the AAssays
     for x in xrange(0,len(AAssays)):
         # Print assay well and name
-        outString += ("%-10s%-30s") % (x+1,AAssays[x].name + "A")
+        if tabDelimited:
+            outString += str(x+1) + "\t" + AAssays[x].name + "A"
+        else:
+            outString += ("%-10s%-30s") % (x+1,AAssays[x].name + "A")
+        
         # Print all CT values
         for exp in exps:
             ct = AAssays[x].getCTForExperiment(exp)
-            if ct:  # If the CT does not exist, print an X. If it is NOT "Undetermined", round it to 3 decimal places
-                outString += ("%-30s") % ("Undetermined" if ct.value == "Undetermined" else round(float(ct.value),3))
+            if tabDelimited:
+                if ct:
+                    outString += "\t" + ("Undetermined" if ct.value == "Undetermined" else str(round(float(ct.value),3)))
+                else:
+                    outString += "\t" + "X"
             else:
-                outString += ("%-30s") % ("X")
+                if ct:  # If the CT does not exist, print an X. If it is NOT "Undetermined", round it to 3 decimal places
+                    outString += ("%-30s") % ("Undetermined" if ct.value == "Undetermined" else round(float(ct.value),3))
+                else:
+                    outString += ("%-30s") % ("X")
         outString += "\n"
     
     # Repeat above steps for BAssays
     # NOTE: If ABMerged = True, BAssays = [], so this code would not execute at all
     for x in xrange(0,len(BAssays)):
-        outString += ("%-10s%-30s") % (x+1,BAssays[x].name + "B")
+        if tabDelimited:
+            outString += str(x+1) + "\t" + AAssays[x].name + "B"
+        else:
+            outString += ("%-10s%-30s") % (x+1,BAssays[x].name + "B")
         for exp in exps:
             ct = BAssays[x].getCTForExperiment(exp)
-            if ct:
-                outString += ("%-30s") % ("Undetermined" if ct.value == "Undetermined" else round(float(ct.value),3))
+            if tabDelimited:
+                if ct:
+                    outString += "\t" + ("Undetermined" if ct.value == "Undetermined" else str(round(float(ct.value),3)))
+                else:
+                    outString += "\t" + "X"
             else:
-                outString += ("%-30s") % ("X")
+                if ct:  # If the CT does not exist, print an X. If it is NOT "Undetermined", round it to 3 decimal places
+                    outString += ("%-30s") % ("Undetermined" if ct.value == "Undetermined" else round(float(ct.value),3))
+                else:
+                    outString += ("%-30s") % ("X")
         outString += "\n"
     
     # Return the table
@@ -306,17 +348,29 @@ def checkForTrainingData():
         return None
 
 
-def combineABAssays(AAssays,BAssays,refExp = "01"):
+def combineABAssays(AAssays,BAssays):
+    # Pick a reference patient to compute adjuster. That is, which experiment do A and B have in common (ex. if 03 was a experiment, there would be a 03A.txt and 03B.txt)
+    aCts = AAssays[0].cts
+    bCts = BAssays[0].cts
+    refExp = None
+    for aCt in aCts:
+        if not(refExp is None):
+            break
+        for bCt in bCts:
+            if bCt.experiment == aCt.experiment:
+                refExp = aCt.experiment
+                break
+
     # Merge A and B assays using the U6 reference assay
     # Get U6 assay CTs from A and B assays
-    AU6 = [float(x.getCTForExperiment("01").value) for x in AAssays if "U6" in x.name and x.getCTForExperiment("01").value <> "Undetermined"]
-    BU6 = [float(x.getCTForExperiment("01").value) for x in BAssays if "U6" in x.name and x.getCTForExperiment("01").value <> "Undetermined"]
+    AU6 = [float(x.getCTForExperiment(refExp).value) for x in AAssays if "U6" in x.name and x.getCTForExperiment(refExp).value != "Undetermined"]
+    BU6 = [float(x.getCTForExperiment(refExp).value) for x in BAssays if "U6" in x.name and x.getCTForExperiment(refExp).value != "Undetermined"]
     # Find difference in the averages
     adjuster = sum(AU6)/len(AU6) - sum(BU6)/len(BU6)
     # Adjust the CT by this difference
     for assay in BAssays:
         for ct in assay.cts:
-            if ct.value <> "Undetermined":
+            if ct.value != "Undetermined":
                 ct.value = float(ct.value) + adjuster
     # Return merged assays
     mergedRes = AAssays + BAssays
@@ -330,43 +384,96 @@ def copyFileToPath(filePath,targetPath):
     targetFile.writelines(lines)
     targetFile.close()
 
-def fileNamesForLetter(txtfiles,trainingDir, letter):
-    # Returns all file names for group A or B
-    fileNames = [trainingDir + "/" + f for f in txtfiles if f[-5:-4] == letter]
-    return fileNames
-
-def filesToAssayArray(txtfiles,trainingDir):
-    # Turns files into array of assays
+def filesToAssayArray(txtFiles,trainingDir):
+    ''' Turns files into list of assays '''
     
-    (AFileNames, BFileNames) =  (fileNamesForLetter(txtfiles,trainingDir, "A"),fileNamesForLetter(txtfiles,trainingDir, "B"))
+    # Get files that end with *A.txt and *B.txt
+    AFileNames = [trainingDir + "/" + f for f in txtFiles if f[-5:-4] == "A"]
+    BFileNames = [trainingDir + "/" + f for f in txtFiles if f[-5:-4] == "B"]
     AAssays = []
     BAssays = []
     
-    # Get the A and B assay names
-    (targetnames,cts) = getTargetNamesAndCTs(open(AFileNames[0],"r").readlines(),AFileNames[0])
-    for x in xrange(0,len(targetnames)):
-        AAssays.append(Assay(targetnames[x],"A"))
+    # IF there are A files
+    if len(AFileNames) > 0:
+        # Get the target names (the mir names) and CT values from the first file
+        (targetnames,cts) = getTargetNamesAndCTs(open(AFileNames[0],"r").readlines(),AFileNames[0])
+        # Add this to list of A assays
+        AAssays += [Assay(x,"A") for x in targetnames]
+
+        # For all the A files,
+        for AFileName in AFileNames:
+            (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
+            # for each target name within the file
+            for x in xrange(0,len(targetnames)):
+                # find that target name in the list of A assays
+                for AAssay in AAssays:
+                    if AAssay.name == targetnames[x]:
+                        # and add the ct value to the A assay's list of CTs (NOTE, the second argument to the CT constructor is experiment number)
+                        AAssay.cts.append(CT(cts[x],AFileName.replace(".txt","").replace("A","").replace(trainingDir+"/","")))
+    # Repeat the above procedure for B files
+    if len(BFileNames) > 0:
+        (targetnames,cts) = getTargetNamesAndCTs(open(BFileNames[0],"r").readlines(),BFileNames[0])
+        BAssays = [Assay(x,"B") for x in targetnames]
     
-    (targetnames,cts) = getTargetNamesAndCTs(open(BFileNames[0],"r").readlines(),BFileNames[0])
-    for x in xrange(0,len(targetnames)):
-        BAssays.append(Assay(targetnames[x],"B"))
-    
-    # Append the cts to each assay
-    for AFileName in AFileNames:
-        (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
-        for x in xrange(0,len(targetnames)):
-            for AAssay in AAssays:
-                if AAssay.name == targetnames[x]:
-                    AAssay.cts.append(CT(cts[x],AFileName.replace(".txt","").replace("A","").replace(trainingDir+"/","")))
-    
-    for BFileName in BFileNames:
-        (targetnames,cts) = getTargetNamesAndCTs(open(BFileName,"r").readlines(),BFileName)
-        for x in xrange(0,len(targetnames)):
-            for BAssay in BAssays:
-                if BAssay.name == targetnames[x]:
-                    BAssay.cts.append(CT(cts[x],BFileName.replace(".txt","").replace("B","").replace(trainingDir+"/","")))
+        for BFileName in BFileNames:
+            (targetnames,cts) = getTargetNamesAndCTs(open(BFileName,"r").readlines(),BFileName)
+            for x in xrange(0,len(targetnames)):
+                for BAssay in BAssays:
+                    if BAssay.name == targetnames[x]:
+                        BAssay.cts.append(CT(cts[x],BFileName.replace(".txt","").replace("B","").replace(trainingDir+"/","")))
     return (AAssays,BAssays)
 
+def getTargetNamesAndCTs(lines,fname):
+    ''' Use state machine to extract target names and CTs from a file'''
+    # params: lines = list of the lines in the file, fname = name of file
+
+    # states
+    LOOKING_FOR_DATA = 0
+    READING_HEADER = 1
+    READING_DATA = 2
+    state = LOOKING_FOR_DATA
+
+    target_name_col = -1    # column of the data which contains the target name
+    ct_col = -1             # column of the data which contians the CT
+    num_cols = -1           # number of columns of data
+
+    u6 = 1
+
+    # list of target names and cts from the file
+    targetNames = []
+    cts = []
+
+    # for every line
+    for x in xrange(0,len(lines)):
+        # if we see [Results] then the following line is the header for the table (i.e. the listing of column names)
+        if state == LOOKING_FOR_DATA:
+            if "[Results]" in lines[x]:
+                state = READING_HEADER
+        # read the header to find out target_name_col, ct_col, and num_cols
+        elif state == READING_HEADER:
+            split_line = lines[x].split("\t")
+            num_cols = len(split_line)
+            for y in xrange(0,len(split_line)):
+                if split_line[y] == "Target Name":
+                    target_name_col = y
+                elif split_line[y] == "CT":
+                    ct_col = y
+            if target_name_col == -1 or ct_col == -1:   # panic if we can't find the ct_col or target_name_col
+                raise Exception(fname + " does not have the CT and Target Name columns")
+            state = READING_DATA    # otherwise, change state because the following line is a data line
+        # split the line and get the target name (from the target_name_col) and ct (from the ct_col)
+        elif state == READING_DATA:
+            split_line = lines[x].split("\t")
+            if len(split_line) != num_cols:
+                continue
+            if "U6" in split_line[target_name_col]: # Give each U6 assay a different name
+                split_line[target_name_col] += str(u6)
+                u6 += 1
+            targetNames.append(split_line[target_name_col])
+            cts.append(split_line[ct_col])
+    return (targetNames, cts)
+
+'''
 def getTargetNamesAndCTs(lines, fname):
     # Returns all the assay names and ctvalues in a file
     resLine  = -1   # 1 means this is the line that contains the [Results] marker
@@ -377,7 +484,7 @@ def getTargetNamesAndCTs(lines, fname):
     rowLen = -1
     u6 = 1
     for x in xrange(0,len(lines)):
-        if resLine <> -1:   # If this is the line after resLine, get column information
+        if resLine != -1:   # If this is the line after resLine, get column information
             if x == resLine + 1:
                 spl = lines[x].split("\t")
                 rowLen = len(spl)
@@ -386,9 +493,9 @@ def getTargetNamesAndCTs(lines, fname):
                         tInt = y
                     elif spl[y] == "CT":
                         cInt = y
-            elif x >= resLine + 2 and tInt <> -1 and cInt <> -1:    # If this is a later line, get CT and TargetName
+            elif x >= resLine + 2 and tInt != -1 and cInt != -1:    # If this is a later line, get CT and TargetName
                 spl = lines[x].split("\t")
-                if len(spl) <> rowLen:  # If this is not a row, ignore it
+                if len(spl) != rowLen:  # If this is not a row, ignore it
                     continue
                 if "U6" in spl[tInt]:
                     spl[tInt] += str(u6)    # Give U6 assays distinct names
@@ -400,7 +507,7 @@ def getTargetNamesAndCTs(lines, fname):
     if tInt == -1 or cInt == -1:
         raise Exception(fname + " does not have the CT and Target Name columns")
     return (targetNames, cts)
-   
+'''   
 def histogramDictionary(L, binSz, low, high):
     # Create a histogram in the form of a dictionary
     d = {}
@@ -459,7 +566,7 @@ def minChiSqAssays(assays):
     consideredAssays = [assay for assay in assays if assay.group == "A" and assay.hasAllCTs()]
     exps = tuple(set([ct.experiment for ct in consideredAssays[0].cts]))
     for assay in consideredAssays:
-        if len(assay.cts) <> len(exps):
+        if len(assay.cts) != len(exps):
             raise Exception("Error: CT dimension mismatch for least variant assays")
     expected = []
     for exp in exps:
@@ -506,7 +613,7 @@ def populateAssaysForNames(AAssayNames,BAssayNames,AFileNames,BFileNames,trainin
         for line in AFile.readlines():
             if line[0].isdigit():
                 spl = line.split("\t")
-                if spl[1] <> AAssays[assayCounter].name:
+                if spl[1] != AAssays[assayCounter].name:
                     raise Exception("Error")        
                 AAssays[assayCounter].cts.append(CT(spl[2],AFileName.replace(trainingDir+"/", "").replace(".txt","").replace("A", "")))             
                 assayCounter += 1
@@ -517,7 +624,7 @@ def populateAssaysForNames(AAssayNames,BAssayNames,AFileNames,BFileNames,trainin
         for line in BFile.readlines():
             if line[0].isdigit():
                 spl = line.split("\t")
-                if spl[1] <> BAssays[assayCounter].name:
+                if spl[1] != BAssays[assayCounter].name:
                     raise Exception("Error")        
                 BAssays[assayCounter].cts.append(CT(spl[2],BFileName.replace(trainingDir+"/", "").replace(".txt","").replace("B", "")))             
                 assayCounter += 1
@@ -559,10 +666,10 @@ class Patient:
                 return mir
         return None
     def normalizeWRTMirNames(self,mirnames):
-        mirCTs = [float(x.ct) for x in self.mirs if x.name in mirnames and x.ct <> "Undetermined"]
+        mirCTs = [float(x.ct) for x in self.mirs if x.name in mirnames and x.ct != "Undetermined"]
         avgCT = sum(mirCTs)/(1.0*len(mirCTs))
         for mir in self.mirs:
-            if mir.ct <> "Undetermined":
+            if mir.ct != "Undetermined":
                 mir.ct = float(mir.ct) - avgCT
     def toSVMFormatString(self):
         outString = str(self.label) + " "
@@ -760,7 +867,7 @@ class SVMHelper:
             (totSum, posSum, negSum) = (0.0, 0.0, 0.0)
             (totCount,posCount,negCount) = (0.0, 0.0, 0.0)
             for pat in patients:
-                if pat.label <> l1 and pat.label <> l2:
+                if pat.label != l1 and pat.label != l2:
                     continue
                 val = pat.getMirForName(mirName).ct
                 if val == "Undetermined":
@@ -779,7 +886,7 @@ class SVMHelper:
             numerator = (posMean-totMean)**2 + (negMean-totMean)**2
             (posSqSum,negSqSum) = (0.0, 0.0)
             for pat in patients:
-                if pat.label <> l1 and pat.label <> l2:
+                if pat.label != l1 and pat.label != l2:
                     continue
                 val = pat.getMirForName(mirName).ct
                 if val == "Undetermined":
