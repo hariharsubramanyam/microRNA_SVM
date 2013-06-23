@@ -34,23 +34,26 @@ if_predict_all=0
 
 whole_fsc_dict={}
 whole_imp_v=[]
-
+feature_set_size  = 0
 
 def arg_process():
 	global train_pathfile, test_pathfile
 	global train_file, test_file
 	global svmtrain_exe, svmpredict_exe
+	global feature_set_size
 
-	if len(sys.argv) not in [2,3]:
-		print('Usage: %s training_file [testing_file]' % sys.argv[0])
+	if len(sys.argv) not in [2,3,4]:
+		print('Usage: %s training_file [num_features] [testing_file]' % sys.argv[0])
 		raise SystemExit
 
 	train_pathfile=sys.argv[1]
 	assert os.path.exists(train_pathfile),"training file not found"
 	train_file = os.path.split(train_pathfile)[1]
+	if len(sys.argv) >= 3:
+		feature_set_size = sys.argv[2]
 
-	if len(sys.argv) == 3:
-		test_pathfile=sys.argv[2]
+	if len(sys.argv) == 4:
+		test_pathfile=sys.argv[3]
 		assert os.path.exists(test_pathfile),"testing file not found"
 		test_file = os.path.split(test_pathfile)[1]
 
@@ -284,6 +287,9 @@ def main():
 
 	### decide sizes of features to try
 	fnum_v = feat_num_try(f_tuples) #ex: [50,25,12,6,3,1]
+	if feature_set_size != 0:
+		fnum_v = []
+		fnum_v.append(int(feature_set_size))
 	for i in range(len(fnum_v)):
 		accuracy.append([])
 	writelog("try feature sizes: %s\n\n"%(fnum_v))
@@ -397,7 +403,6 @@ def predict_all():
 
 	###whole_fsc_dict, ordered_feats = cal_feat_imp(train_label,train_sample)
 	ordered_feats = whole_imp_v
-	f_tuples = whole_fsc_dict.items()
 	f_tuples.sort(key = value_cmpf)
 
 	fnum_v = feat_num_try(f_tuples) #ex: [50,25,12,6,3,1]

@@ -35,14 +35,17 @@ def main():
     aParser = argparse.ArgumentParser(description="Aggregate PCR files and optionally run SVM")
     aParser.add_argument("-t","--testData",help="0 = do not run SVM on testing data (default), 1 = run SVM on testing data")
     aParser.add_argument("-c","--compMetric",help="Metric used to normalize between patients (0 = chi-squared (default), 1 = variance*mean)")
+    aParser.add_argument("-f","--feature_set_size",help="Number of micro-RNAs to look for when determining most distinguishing micro-RNAs")
     argNamespace = aParser.parse_args()
 
     scriptDir = os.path.dirname(os.path.realpath(__file__))
     libsvmdir = checkForLibSVM()
     groupfile = checkForGroupFile()
     trainingDir = checkForTrainingData()
+    feature_set_size = argNamespace.feature_set_size
     testingDir = None
     compMetric = 0
+    feature_set_size = 10
 
     if not(libsvmdir or groupfile):
         print "\n"
@@ -172,12 +175,18 @@ def main():
             os.chdir(scriptDir + "/" + libsvmdir+"/tools")
             
             if (not (testingDir is None)):
-                os.system("python fselect.py ../PatientData ../PatientDataTesting")
+                if feature_set_size is None:
+                    os.system("python fselect.py ../PatientData ../PatientDataTesting")
+                else:
+                    os.system("python fselect.py ../PatientData " + str(feature_set_size) + " ../PatientDataTesting")
                 copyFileToPath(libsvmdir + "/tools/PatientData.model", scriptDir + "/Output/Model" + str(groups[x]) + "_" + str(groups[y]) + ".model")
                 copyFileToPath(libsvmdir + "/PatientDataTesting",scriptDir + "/Output/Testing" + str(groups[x]) + "_" + str(groups[y]))
                 copyFileToPath(libsvmdir + "/PatientDataTesting", scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
             else:
-                os.system("python fselect.py ../PatientData")
+                if feature_set_size is None:
+                    os.system("python fselect.py ../PatientData")
+                else:
+                    os.system("python fselect.py ../PatientData " + str(feature_set_size))
             
             os.chdir(currDir)
             copyFileToPath(libsvmdir + "/PatientData",scriptDir + "/Output/Training" + str(groups[x]) + "_" + str(groups[y]))
