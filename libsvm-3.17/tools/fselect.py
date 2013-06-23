@@ -284,7 +284,6 @@ def main():
 
 	### decide sizes of features to try
 	fnum_v = feat_num_try(f_tuples) #ex: [50,25,12,6,3,1]
-	fnum_v = range(1,31) #CHANGED
 	for i in range(len(fnum_v)):
 		accuracy.append([])
 	writelog("try feature sizes: %s\n\n"%(fnum_v))
@@ -339,8 +338,8 @@ def main():
 		
 
 	# REMOVE INTERMEDIATE TEMPORARY FILE: training file after selection
-	rem_file(tr_sel_name)
-	rem_file("%s.out"%tr_sel_name)
+	#rem_file(tr_sel_name)
+	#rem_file("%s.out"%tr_sel_name)
 	#rem_file("%s.png"%tr_sel_name)
 
 
@@ -359,9 +358,7 @@ def main():
 		test_sel_samp = select(test_sample, sel_fv)
 
 		#grid search
-		#CHANGED
-		#train_sel_name = "%s.%d"%(train_file,fnum)
-		train_sel_name = "%s"%(train_file)
+		train_sel_name = "%s.%d"%(train_file,fnum)
 		writedata(train_sel_samp,train_label,train_sel_name)
 		c,g, cv_acc = train_svm(train_sel_name)
 		writelog("best (c,g)= %s, cv-acc = %.6f\n"%([c,g],cv_acc))
@@ -379,9 +376,7 @@ def main():
 		writelog("testing accuracy = %.6f\n"%acc)
 
 		#writing predict labels
-		#CHANGED
-		#out_name = "%s.%d.pred"%(test_file,fnum)
-		out_name = "%s.pred"%(test_file)
+		out_name = "%s.%d.pred"%(test_file,fnum)
 		fd = open(out_name, 'w')
 		for y in pred_y: fd.write("%f\n"%y)
 		fd.close()
@@ -404,8 +399,9 @@ def predict_all():
 	ordered_feats = whole_imp_v
 	f_tuples = whole_fsc_dict.items()
 	f_tuples.sort(key = value_cmpf)
+
 	fnum_v = feat_num_try(f_tuples) #ex: [50,25,12,6,3,1]
-	fnum_v = range(1,31) #CHANGED
+
 	writelog("\nTest All %s\n"%fnum_v)
 	for fnum in fnum_v:
 		sel_fv = ordered_feats[:fnum]
@@ -415,9 +411,7 @@ def predict_all():
 		test_sel_samp = select(test_sample, sel_fv)
 
 		#grid search
-		#CHANGED
-		#train_sel_name = "%s.%d"%(train_file,fnum)
-		train_sel_name = "%s"%(train_file)
+		train_sel_name = "%s.%d"%(train_file,fnum)
 		writedata(train_sel_samp,train_label,train_sel_name)
 		c,g, cv_acc = train_svm(train_sel_name)
 		writelog("best (c,g)= %s, cv-acc = %.6f\n"%([c,g],cv_acc))
@@ -434,17 +428,15 @@ def predict_all():
 		writelog("feat# %d, testing accuracy = %.6f\n"%(fnum,acc))
 
 		#writing predict labels
-		#CHANGED
-		#out_name = "%s.%d.pred"%(test_file,fnum)
-		out_name = "%s.pred"%(test_file)
+		out_name = "%s.%d.pred"%(test_file,fnum)
 		fd = open(out_name, 'w')
 		for y in pred_y: fd.write("%f\n"%y)
 		fd.close()
 
-		del_out_png = 0
-		if del_out_png:
-			rem_file("%s.out"%train_sel_name)
-			#rem_file("%s.png"%train_sel_name)
+		#del_out_png = 0
+		#if del_out_png:
+		#	rem_file("%s.out"%train_sel_name)
+		#	rem_file("%s.png"%train_sel_name)
 
 
 ###return a dict containing F_j
@@ -571,4 +563,3 @@ if if_predict_all :
 	predict_all()
 
 writelog("\nend: \n%s\n"%datetime.now())
-

@@ -43,7 +43,6 @@ def main():
     trainingDir = checkForTrainingData()
     testingDir = None
     compMetric = 0
-    trainingDir = "./CSF"
 
     if not(libsvmdir or groupfile):
         print "\n"
@@ -532,7 +531,7 @@ def drawHistogramString(D, binSz, low, high):
 
 def labelPatients(patients, groupfile):
     if groupfile is None:
-        groupfile = os.path.dirname(os.path.realpath(__file__)) + "/PatientGroups/patgroups.txt"
+        groupfile = os.path.dirname(os.path.realpath(__file__)) + "/patgroups.txt"
     try:
         gf = open(groupfile,"r")
     except:
