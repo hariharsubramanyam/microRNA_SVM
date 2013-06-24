@@ -43,8 +43,9 @@ def main():
     trainingDir = checkForTrainingData()
     testingPatientsFile = checkForTestingPatientsFile()
     feature_set_size = argNamespace.feature_set_size
-    compMetric = 0
-    feature_set_size = 10
+    compMetric = argNamespace.compMetric
+    if compMetric is None:
+        compMetric = 0
 
     if not(libsvmdir or groupfile):
         print "\n"
