@@ -1,4 +1,4 @@
-Here is a summary of all the major computations in DirectoryCombine
+Notes:
 
 1: Convert files to A and B assays
 	- Heavy lifting done in filesToAssayArray() and getTargetNamesAndCTs()

@@ -46,6 +46,8 @@ def main():
     compMetric = argNamespace.compMetric
     if compMetric is None:
         compMetric = 0
+    if feature_set_size is None:
+        feature_set_size = -1
 
     if not(libsvmdir or groupfile):
         print "\n"

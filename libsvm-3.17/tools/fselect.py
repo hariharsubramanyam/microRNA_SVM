@@ -287,7 +287,7 @@ def main():
 
 	### decide sizes of features to try
 	fnum_v = feat_num_try(f_tuples) #ex: [50,25,12,6,3,1]
-	if feature_set_size != 0:
+	if feature_set_size != -1:
 		fnum_v = []
 		fnum_v.append(int(feature_set_size))
 	for i in range(len(fnum_v)):
