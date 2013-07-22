@@ -191,9 +191,11 @@ def main():
                 else:
                     os.system("python fselect.py ../PatientData " + str(feature_set_size) + " ../PatientDataTesting")
                 os.chdir(currDir)
-                copyFileToPath(scriptDir + "/" + libsvmdir + "/tools/PatientData.10.model", scriptDir + "/Output/Model" + str(groups[x]) + "_" + str(groups[y]) + ".model")
+                modelFile = [f for f in listdir(scriptDir+"/"+libsvmdir+"/tools") if isfile(join(scriptDir+"/"+libsvmdir+"/tools",f)) and (".model" in f)][0]
+                predFile = [f for f in listdir(scriptDir+"/"+libsvmdir+"/tools") if isfile(join(scriptDir+"/"+libsvmdir+"/tools",f)) and (".pred" in f)][0]
+                copyFileToPath(scriptDir+"/"+libsvmdir+"/tools/"+modelFile, scriptDir + "/Output/Model" + str(groups[x]) + "_" + str(groups[y]) + ".model")
                 copyFileToPath(scriptDir + "/" + libsvmdir + "/PatientDataTesting",scriptDir + "/Output/Testing" + str(groups[x]) + "_" + str(groups[y]))
-                copyFileToPath(scriptDir + "/" + libsvmdir + "/tools/PatientDataTesting.10.pred", scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
+                copyFileToPath(scriptDir+"/"+libsvmdir+"/tools/"+predFile, scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
             else:
                 if feature_set_size is None:
                     os.system("python fselect.py ../PatientData")
