@@ -115,6 +115,9 @@ def main():
     print "Reorganizing data structures..."
     sys.stdout.flush()
     patients = assaysToPatients(assays,txtfiles)
+    for p in patients:
+        if len(p.mirs) == 0:
+            print p.name
     
     # Normalize patients
     print "Normalizing patients with respect to least variant assays..."
@@ -425,6 +428,7 @@ def filesToAssayArray(txtFiles,trainingDir):
         # For all the A files,
         for AFileName in AFileNames:
             (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
+
             # for each target name within the file
             for x in xrange(0,len(targetnames)):
                 # find that target name in the list of A assays
@@ -690,11 +694,11 @@ class Patient:
                 return mir
         return None
     def normalizeWRTMirNames(self,mirnames):
-        mirCTs = [float(x.ct) for x in self.mirs if x.name in mirnames and x.ct != "Undetermined"]
-        avgCT = sum(mirCTs)/(1.0*len(mirCTs))
-        for mir in self.mirs:
-            if mir.ct != "Undetermined":
-                mir.ct = float(mir.ct) - avgCT
+      mirCTs = [float(x.ct) for x in self.mirs if x.name in mirnames and x.ct != "Undetermined"]
+      avgCT = sum(mirCTs)/(1.0*len(mirCTs))
+      for mir in self.mirs:
+        if mir.ct != "Undetermined":
+          mir.ct = float(mir.ct) - avgCT
     def toSVMFormatString(self):
         outString = str(self.label) + " "
         for x in xrange(0,len(self.mirs)):
