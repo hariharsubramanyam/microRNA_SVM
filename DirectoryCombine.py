@@ -115,9 +115,6 @@ def main():
     print "Reorganizing data structures..."
     sys.stdout.flush()
     patients = assaysToPatients(assays,txtfiles)
-    for p in patients:
-        if len(p.mirs) == 0:
-            print p.name
     
     # Normalize patients
     print "Normalizing patients with respect to least variant assays..."
@@ -227,7 +224,7 @@ def assayOutputString(assays,ABMerged=False,tabDelimited=True):
     
     # Get experiment names for A and B assays
     AExps = [AAssays[0].cts[x].experiment for x in xrange(0,len(AAssays[0].cts))]
-    if ABMerged:
+    if ABMerged and len(BAssays) > 0:
         BExps = [BAssays[0].cts[x].experiment for x in xrange(0,len(BAssays[0].cts))]
     else:
         BExps = []
@@ -428,7 +425,6 @@ def filesToAssayArray(txtFiles,trainingDir):
         # For all the A files,
         for AFileName in AFileNames:
             (targetnames,cts) = getTargetNamesAndCTs(open(AFileName,"r").readlines(),AFileName)
-
             # for each target name within the file
             for x in xrange(0,len(targetnames)):
                 # find that target name in the list of A assays
@@ -595,7 +591,7 @@ def minChiSqAssays(assays):
     exps = tuple(set([ct.experiment for ct in consideredAssays[0].cts]))
     for assay in consideredAssays:
         if len(assay.cts) != len(exps):
-            raise Exception("Error: CT dimension mismatch for least variant assays")
+            raise Exception(("%s has %s cts, but there are %s patients")%(str(assay.name),str(len(assay.cts)),str(len(exps))))
     expected = []
     for exp in exps:
         currSum = 0.0
@@ -694,11 +690,11 @@ class Patient:
                 return mir
         return None
     def normalizeWRTMirNames(self,mirnames):
-      mirCTs = [float(x.ct) for x in self.mirs if x.name in mirnames and x.ct != "Undetermined"]
-      avgCT = sum(mirCTs)/(1.0*len(mirCTs))
-      for mir in self.mirs:
-        if mir.ct != "Undetermined":
-          mir.ct = float(mir.ct) - avgCT
+        mirCTs = [float(x.ct) for x in self.mirs if x.name in mirnames and x.ct != "Undetermined"]
+        avgCT = sum(mirCTs)/(1.0*len(mirCTs))
+        for mir in self.mirs:
+            if mir.ct != "Undetermined":
+                mir.ct = float(mir.ct) - avgCT
     def toSVMFormatString(self):
         outString = str(self.label) + " "
         for x in xrange(0,len(self.mirs)):
