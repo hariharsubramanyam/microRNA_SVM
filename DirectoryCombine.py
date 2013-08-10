@@ -23,6 +23,10 @@ from subprocess import *    # for using subprocess functions by writing myFuncti
 from os import listdir      # for listing directories
 from os.path import isfile, join    # for checking if files exist and combining multiple strings into one 
 #from mx.Misc.Cache import DENOM     # for command line programs
+import pdb
+
+
+DEBUG = True 
 
 def main():
     
@@ -157,7 +161,6 @@ def main():
     sys.stdout.flush()
     lvMirNames = [x.name for x in assays if x.group == "A"]
     
-    
     for x in xrange(0,len(groups)-1):
         for y in xrange(x+1,len(groups)):
             # Generate training data string
@@ -191,6 +194,7 @@ def main():
                 else:
                     os.system("python fselect.py ../PatientData " + str(feature_set_size) + " ../PatientDataTesting")
                 os.chdir(currDir)
+                print listdir(scriptDir + "/" + libsvmdir + "/tools")
                 modelFile = [f for f in listdir(scriptDir+"/"+libsvmdir+"/tools") if isfile(join(scriptDir+"/"+libsvmdir+"/tools",f)) and (".model" in f)][0]
                 predFile = [f for f in listdir(scriptDir+"/"+libsvmdir+"/tools") if isfile(join(scriptDir+"/"+libsvmdir+"/tools",f)) and (".pred" in f)][0]
                 copyFileToPath(scriptDir+"/"+libsvmdir+"/tools/"+modelFile, scriptDir + "/Output/Model" + str(groups[x]) + "_" + str(groups[y]) + ".model")
@@ -317,6 +321,9 @@ def assaysToPatients(assays,txtfiles):
                     patient.mirs.append(Mir(assay.name,ct.value,assay.group))
     return patients
 
+def breakpoint():
+    if DEBUG:
+        pdb.set_trace()
 def checkForLibSVM():
     libsvmdir = None
     try:
@@ -491,7 +498,14 @@ def getTargetNamesAndCTs(lines,fname):
             if "U6" in split_line[target_name_col]: # Give each U6 assay a different name
                 split_line[target_name_col] += str(u6)
                 u6 += 1
-            targetNames.append(split_line[target_name_col])
+            duplicates = 0
+            for targ in targetNames:
+                if targ == split_line[target_name_col]:
+                    duplicates += 1
+            appender = ""
+            if duplicates > 0:
+                appender = str(duplicates)
+            targetNames.append(split_line[target_name_col]+appender)
             cts.append(split_line[ct_col])
     return (targetNames, cts)
 
