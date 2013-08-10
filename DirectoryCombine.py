@@ -38,7 +38,7 @@ def main():
 
     aParser = argparse.ArgumentParser(description="Aggregate PCR files and optionally run SVM")
     aParser.add_argument("-c","--compMetric",help="Metric used to normalize between patients (0 = chi-squared (default), 1 = variance*mean)")
-    aParser.add_argument("-f","--feature_set_size",help="Number of micro-RNAs to look for when determining most distinguishing micro-RNAs")
+    aParser.add_argument("-f","--feature_set_size",help="Number of micro-RNAs to look for when determining most distinguishing micro-RNAs, defaults to 10 ")
     argNamespace = aParser.parse_args()
 
     scriptDir = os.path.dirname(os.path.realpath(__file__))
@@ -51,7 +51,7 @@ def main():
     if compMetric is None:
         compMetric = 0
     if feature_set_size is None:
-        feature_set_size = -1
+        feature_set_size = 10
 
     if not(libsvmdir or groupfile):
         print "\n"
@@ -154,8 +154,10 @@ def main():
     # Determine which files need to be tested
     print "Determining files to be tested..."
     sys.stdout.flush()
-    testPatients = [x.replace("\n","") for x in open(testingPatientsFile).readlines()]
-    
+    if testingPatientsFile:
+        testPatients = [x.replace("\n","") for x in open(testingPatientsFile).readlines()]
+        if len(testPatients) == 0:
+            testingPatientsFile = None
     # Get all candidate mirs
     print "Choosing mirs from A group with all CTs..."
     sys.stdout.flush()
@@ -189,10 +191,7 @@ def main():
             os.chdir(scriptDir + "/" + libsvmdir+"/tools")
             
             if (not (testingPatientsFile is None)):
-                if feature_set_size is None:
-                    os.system("python fselect.py ../PatientData ../PatientDataTesting")
-                else:
-                    os.system("python fselect.py ../PatientData " + str(feature_set_size) + " ../PatientDataTesting")
+                os.system("python fselect.py ../PatientData " + str(feature_set_size) + " ../PatientDataTesting")
                 os.chdir(currDir)
                 print listdir(scriptDir + "/" + libsvmdir + "/tools")
                 modelFile = [f for f in listdir(scriptDir+"/"+libsvmdir+"/tools") if isfile(join(scriptDir+"/"+libsvmdir+"/tools",f)) and (".model" in f)][0]
@@ -201,10 +200,7 @@ def main():
                 copyFileToPath(scriptDir + "/" + libsvmdir + "/PatientDataTesting",scriptDir + "/Output/Testing" + str(groups[x]) + "_" + str(groups[y]))
                 copyFileToPath(scriptDir+"/"+libsvmdir+"/tools/"+predFile, scriptDir + "/Output/Prediction" + str(groups[x]) + "_" + str(groups[y]) + ".pred")
             else:
-                if feature_set_size is None:
-                    os.system("python fselect.py ../PatientData")
-                else:
-                    os.system("python fselect.py ../PatientData " + str(feature_set_size))
+                os.system("python fselect.py ../PatientData " + str(feature_set_size))
             
             os.chdir(currDir)
             copyFileToPath(libsvmdir + "/PatientData",scriptDir + "/Output/Training" + str(groups[x]) + "_" + str(groups[y]))
