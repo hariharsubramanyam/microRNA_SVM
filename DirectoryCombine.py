@@ -26,7 +26,7 @@ from os.path import isfile, join    # for checking if files exist and combining 
 import pdb
 
 
-DEBUG = True 
+DEBUG = False 
 
 def main():
     
@@ -479,9 +479,9 @@ def getTargetNamesAndCTs(lines,fname):
             split_line = lines[x].split("\t")
             num_cols = len(split_line)
             for y in xrange(0,len(split_line)):
-                if split_line[y] == "Target Name":
+                if "Target Name" in split_line[y]:
                     target_name_col = y
-                elif split_line[y] == "CT":
+                elif "CT" in split_line[y] or 'Ct' in split_line[y]:
                     ct_col = y
             if target_name_col == -1 or ct_col == -1:   # panic if we can't find the ct_col or target_name_col
                 raise Exception(fname + " does not have the CT and Target Name columns")

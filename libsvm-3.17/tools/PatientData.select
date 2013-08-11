@@ -1,4 +1,4 @@
-start: 2013-08-09 21:19:32.035890
+start: 2013-08-11 13:31:39.339924
 
 try feature sizes: [10]
 
@@ -6,7 +6,7 @@ try feature sizes: [10]
 10:	95.45450
 max validation accuarcy: 95.454500
 
-select features: [313, 286, 270, 16, 280, 278, 111, 217, 192, 253]
+select features: [313, 286, 270, 16, 278, 280, 217, 111, 192, 253]
 10 features
 
 loading testing data '../PatientDataTesting'
@@ -14,4 +14,4 @@ best (c,g)= [0.25, 0.03125], cv-acc = 95.454500
 testing accuracy = 0.000000
 
 end: 
-2013-08-09 21:19:32.748386
+2013-08-11 13:31:39.891876
