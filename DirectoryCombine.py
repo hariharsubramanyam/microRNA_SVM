@@ -452,6 +452,10 @@ def getTargetNamesAndCTs(lines,fname):
     ''' Use state machine to extract target names and CTs from a file'''
     # params: lines = list of the lines in the file, fname = name of file
 
+    # handle different line endings
+    if len(lines) == 1:
+        lines = lines[0].replace("\r","\n").split("\n")
+
     # states
     LOOKING_FOR_DATA = 0
     READING_HEADER = 1
