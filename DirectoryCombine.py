@@ -485,7 +485,7 @@ def getTargetNamesAndCTs(lines,fname):
             for y in xrange(0,len(split_line)):
                 if "Target Name" in split_line[y]:
                     target_name_col = y
-                elif "CT" in split_line[y] or 'Ct' in split_line[y]:
+                elif "ct" in split_line[y].lower():
                     ct_col = y
             if target_name_col == -1 or ct_col == -1:   # panic if we can't find the ct_col or target_name_col
                 raise Exception(fname + " does not have the CT and Target Name columns")
